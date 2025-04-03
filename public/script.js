@@ -146,17 +146,43 @@ document.addEventListener('DOMContentLoaded', () => {
         errorModal.classList.remove('hidden');
     }
 
+    async function getCurrentLocation() {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                reject(new Error('Geolocation is not supported by your browser'));
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    resolve({
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    });
+                },
+                (error) => {
+                    reject(error);
+                }
+            );
+        });
+    }
+
     async function startMinting() {
         console.log('Starting minting process');
         statusContainer.classList.remove('hidden');
         resetStatusSteps();
         
         try {
+            // Get location first
+            const location = await getCurrentLocation();
+            console.log('Location obtained:', location);
+
             // Step 1: Upload to IPFS
             console.log('Step 1: Uploading to IPFS');
             updateStepStatus(uploadStep, 'active');
             const formData = new FormData();
             formData.append('image', selectedFile);
+            formData.append('latitude', location.latitude);
+            formData.append('longitude', location.longitude);
             
             console.log('Sending upload request');
             const uploadResponse = await fetch('/api/upload', {
@@ -214,5 +240,27 @@ document.addEventListener('DOMContentLoaded', () => {
             resetStatusSteps();
         }
     }
+
+    // Add this debug function to script.js
+    function debugLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    console.log('Your location:', {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    });
+                },
+                (error) => {
+                    console.error('Error getting location:', error.message);
+                }
+            );
+        } else {
+            console.error('Geolocation is not supported by this browser');
+        }
+    }
+
+    // Add this line after your existing event listeners
+    document.addEventListener('DOMContentLoaded', debugLocation);
 });
 

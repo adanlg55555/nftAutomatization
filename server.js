@@ -51,8 +51,27 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
     console.log('Received upload request');
     try {
         if (!req.file) {
-            console.log('No file provided in request');
             return res.status(400).json({ success: false, message: 'No image file provided' });
+        }
+
+        // Get location data
+        const latitude = req.body.latitude;
+        const longitude = req.body.longitude;
+
+        // Example location check (modify coordinates for your desired area)
+        const allowedArea = {
+            // Coordinates for central Spain region
+            minLat: 48.0,    // Southern bound
+            maxLat: 50.0,    // Northern bound
+            minLng: -4.5,    // Western bound
+            maxLng: -3.0     // Eastern bound
+        };
+
+        if (!isLocationValid(latitude, longitude, allowedArea)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Minting is not allowed in your current location'
+            });
         }
 
         console.log('Processing file:', {
@@ -80,11 +99,21 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
         const ipfsHash = response.data.IpfsHash;
         console.log('File uploaded to IPFS:', ipfsHash);
 
-        // Create and upload metadata
+        // Add location to metadata
         const metadata = {
             name: `NFT ${Date.now()}`,
             description: 'Minted through NFT Minter App',
-            image: `ipfs://${ipfsHash}`
+            image: `ipfs://${ipfsHash}`,
+            attributes: [
+                {
+                    trait_type: "Latitude",
+                    value: latitude
+                },
+                {
+                    trait_type: "Longitude",
+                    value: longitude
+                }
+            ]
         };
 
         const metadataResponse = await axios.post(
@@ -113,6 +142,23 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
         });
     }
 });
+
+function isLocationValid(lat, lng, allowedArea) {
+    const isValid = (
+        lat >= allowedArea.minLat &&
+        lat <= allowedArea.maxLat &&
+        lng >= allowedArea.minLng &&
+        lng <= allowedArea.maxLng
+    );
+    
+    console.log('Location check:', {
+        provided: { lat, lng },
+        allowed: allowedArea,
+        isValid: isValid
+    });
+    
+    return isValid;
+}
 
 app.post('/api/mint', async (req, res) => {
     console.log('Received mint request');

@@ -21,3 +21,4 @@ A full-stack application that allows users to mint NFTs on the Sepolia testnet u
 
 1. Clone the repository:
 
+INITIALIZE: node server.js 
