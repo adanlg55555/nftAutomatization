@@ -166,15 +166,36 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    async function getImageMetadata(file) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                resolve({
+                    width: img.width,
+                    height: img.height,
+                    aspectRatio: (img.width / img.height).toFixed(2),
+                    size: (file.size / 1024).toFixed(2) + ' KB',
+                    type: file.type
+                });
+            };
+            img.src = URL.createObjectURL(file);
+        });
+    }
+
     async function startMinting() {
         console.log('Starting minting process');
         statusContainer.classList.remove('hidden');
         resetStatusSteps();
         
         try {
-            // Get location first
-            const location = await getCurrentLocation();
+            // Get location and image metadata
+            const [location, imageMetadata] = await Promise.all([
+                getCurrentLocation(),
+                getImageMetadata(selectedFile)
+            ]);
+            
             console.log('Location obtained:', location);
+            console.log('Image metadata:', imageMetadata);
 
             // Step 1: Upload to IPFS
             console.log('Step 1: Uploading to IPFS');
@@ -183,6 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('image', selectedFile);
             formData.append('latitude', location.latitude);
             formData.append('longitude', location.longitude);
+            formData.append('imageMetadata', JSON.stringify(imageMetadata));
             
             console.log('Sending upload request');
             const uploadResponse = await fetch('/api/upload', {

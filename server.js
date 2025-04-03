@@ -54,15 +54,16 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
             return res.status(400).json({ success: false, message: 'No image file provided' });
         }
 
-        // Get location data
+        // Get location and image metadata
         const latitude = req.body.latitude;
         const longitude = req.body.longitude;
+        const imageMetadata = JSON.parse(req.body.imageMetadata);
 
         // Example location check (modify coordinates for your desired area)
         const allowedArea = {
             // Coordinates for central Spain region
-            minLat: 48.0,    // Southern bound
-            maxLat: 50.0,    // Northern bound
+            minLat: 48.0,    // 38.0 
+            maxLat: 50.0,    // 40.0
             minLng: -4.5,    // Western bound
             maxLng: -3.0     // Eastern bound
         };
@@ -99,7 +100,7 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
         const ipfsHash = response.data.IpfsHash;
         console.log('File uploaded to IPFS:', ipfsHash);
 
-        // Add location to metadata
+        // Create metadata for Pinata
         const metadata = {
             name: `NFT ${Date.now()}`,
             description: 'Minted through NFT Minter App',
@@ -107,11 +108,31 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
             attributes: [
                 {
                     trait_type: "Latitude",
-                    value: latitude
+                    value: parseFloat(latitude)
                 },
                 {
                     trait_type: "Longitude",
-                    value: longitude
+                    value: parseFloat(longitude)
+                },
+                {
+                    trait_type: "Image Width",
+                    value: imageMetadata.width
+                },
+                {
+                    trait_type: "Image Height",
+                    value: imageMetadata.height
+                },
+                {
+                    trait_type: "Aspect Ratio",
+                    value: imageMetadata.aspectRatio
+                },
+                {
+                    trait_type: "File Size",
+                    value: imageMetadata.size
+                },
+                {
+                    trait_type: "File Type",
+                    value: imageMetadata.type
                 }
             ]
         };
@@ -144,20 +165,12 @@ app.post('/api/upload', upload.single('image'), async (req, res) => {
 });
 
 function isLocationValid(lat, lng, allowedArea) {
-    const isValid = (
+    return (
         lat >= allowedArea.minLat &&
         lat <= allowedArea.maxLat &&
         lng >= allowedArea.minLng &&
         lng <= allowedArea.maxLng
     );
-    
-    console.log('Location check:', {
-        provided: { lat, lng },
-        allowed: allowedArea,
-        isValid: isValid
-    });
-    
-    return isValid;
 }
 
 app.post('/api/mint', async (req, res) => {
